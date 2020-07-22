@@ -5,7 +5,7 @@
 
 GFForms::include_feed_addon_framework();
 
-class GFSimpleFeedAddOn extends GFFeedAddOn {
+class GFEntrataFeedAddon extends GFFeedAddOn {
 
 	protected $_version = GFORMS_ENTRATA_ADDON_VERSION;
 	protected $_min_gravityforms_version = '1.9.16';
@@ -20,11 +20,11 @@ class GFSimpleFeedAddOn extends GFFeedAddOn {
 	/**
 	 * Get an instance of this class.
 	 *
-	 * @return GFSimpleFeedAddOn
+	 * @return GFEntrataFeedAddon
 	 */
 	public static function get_instance() {
 		if ( self::$_instance == null ) {
-			self::$_instance = new GFSimpleFeedAddOn();
+			self::$_instance = new GFEntrataFeedAddon();
 		}
 
 		return self::$_instance;
@@ -58,12 +58,9 @@ class GFSimpleFeedAddOn extends GFFeedAddOn {
 	 * @return bool|void
 	 */
 	public function process_feed( $feed, $entry, $form ) {
-		$feedName  = $feed['meta']['feedName'];
-		$mytextbox = $feed['meta']['mytextbox'];
-		$checkbox  = $feed['meta']['mycheckbox'];
 
-		// Retrieve the name => value pairs for all fields mapped in the 'mappedFields' field map.
-		$field_map = $this->get_field_map_fields( $feed, 'mappedFields' );
+        // Retrieve the name => value pairs for all fields mapped in the 'mappedFields' field map.
+        $field_map = $this->get_field_map_fields( $feed, 'mappedFields' );
 
 		// Loop through the fields from the field map setting building an array of values to be passed to the third-party service.
 		$merge_vars = array();
@@ -72,9 +69,93 @@ class GFSimpleFeedAddOn extends GFFeedAddOn {
 			// Get the field value for the specified field id
 			$merge_vars[ $name ] = $this->get_field_value( $form, $entry, $field_id );
 
+        }
+                
+        $requesturl = $feed['meta']['entrata_requesturl'];
+        $username = $feed['meta']['entrata_username'];
+        $password = $feed['meta']['entrata_password'];
+        $property_id = $feed['meta']['entrata_propertyid'];
+        $leadsource = $feed['meta']['entrata_leadsource'];
+        $firstname = $merge_vars['first_name'];
+        $lastname = $merge_vars['last_name'];
+        $email = $merge_vars['email'];
+        $phone = $merge_vars['phone'];
+        $message = $merge_vars['message'];
+        $date = date('m/d/Y', mktime(0, 0, 0, date("m"), date("d") -1, date("Y"))) . 'T' . '00:00:00';
+        
+        $body = [
+            "auth" => [
+                "type" => "basic" 
+            ], 
+            "requestId" => "15", 
+            "method" => [
+                "name" => "sendLeads", 
+                "params" => [
+                    "propertyId" => $property_id, 
+                    "doNotSendConfirmationEmail" => "1", 
+                    "isWaitList" => "0", 
+                    "prospects" => [
+                        "prospect" => [
+                            [
+                                "leadSource" => [
+                                    "originatingLeadSourceId" => $leadsource, 
+                                ], 
+                                "createdDate" => $date,
+                                "customers" => [
+                                    "customer" => [
+                                        [
+                                            "name" => [
+                                                "firstName" => $firstname,
+                                                "lastName" => $lastname, 
+                                            ], 
+                                            "phone" => [
+                                                "personalPhoneNumber" => $phone, 
+                                            ], 
+                                            "email" => $email,
+                                        ] 
+                                    ] 
+                                ], 
+                                "customerPreferences" => [
+                                    "comment" => $message, 
+                                ], 
+                            ] 
+                        ] 
+                    ] 
+                ] 
+            ] 
+        ]; 
+        
+        $body = json_encode( $body );
+        
+        //* Set up the auth part of the request
+        $auth = $username . ':' . $password;
+        $auth = base64_encode( $auth );
+        
+        $request = array(
+            'body'        => $body,
+            'headers'     => array(
+                'Content-Type'      => 'application/json',
+                'Authorization'     => 'Basic ' . $auth,
+            ),                
+            'timeout'     => 60,
+            'redirection' => 5,
+            'blocking'    => true,
+            'httpversion' => '1.0',
+            'sslverify'   => false,
+            'data_format' => 'body',
+        );
+        
+        $this->log_debug( 'Outgoing request body: ' . $body );
+        
+        $response = wp_remote_post( $requesturl, $request );
+        
+        // Log error or success based on response.
+		if ( is_wp_error( $response ) ) {
+			$this->add_feed_error( sprintf( esc_html__( 'Webhook was not successfully executed. %s (%d)', 'gforms_entrata' ), $response->get_error_message(), $response->get_error_code() ), $feed, $entry, $form );
+		} else {
+			$this->log_debug( sprintf( '%s(): Webhook successfully executed. code: %s; body: %s', __METHOD__, wp_remote_retrieve_response_code( $response ), wp_remote_retrieve_body( $response ) ) );
 		}
-
-		// Send the values to the third-party service.
+        
 	}
 
 	/**
@@ -99,89 +180,6 @@ class GFSimpleFeedAddOn extends GFFeedAddOn {
 		return $field_value;
 	}
 
-	// # SCRIPTS & STYLES -----------------------------------------------------------------------------------------------
-
-	/**
-	 * Return the scripts which should be enqueued.
-	 *
-	 * @return array
-	 */
-	public function scripts() {
-		$scripts = array(
-			array(
-				'handle'  => 'my_script_js',
-				'src'     => $this->get_base_url() . '/js/my_script.js',
-				'version' => $this->_version,
-				'deps'    => array( 'jquery' ),
-				'strings' => array(
-					'first'  => esc_html__( 'First Choice', 'entrata_gforms_addon' ),
-					'second' => esc_html__( 'Second Choice', 'entrata_gforms_addon' ),
-					'third'  => esc_html__( 'Third Choice', 'entrata_gforms_addon' ),
-				),
-				'enqueue' => array(
-					array(
-						'admin_page' => array( 'form_settings' ),
-						'tab'        => 'entrata_gforms_addon',
-					),
-				),
-			),
-		);
-
-		return array_merge( parent::scripts(), $scripts );
-	}
-
-	/**
-	 * Return the stylesheets which should be enqueued.
-	 *
-	 * @return array
-	 */
-	public function styles() {
-
-		$styles = array(
-			array(
-				'handle'  => 'my_styles_css',
-				'src'     => $this->get_base_url() . '/css/my_styles.css',
-				'version' => $this->_version,
-				'enqueue' => array(
-					array( 'field_types' => array( 'poll' ) ),
-				),
-			),
-		);
-
-		return array_merge( parent::styles(), $styles );
-	}
-
-	// # ADMIN FUNCTIONS -----------------------------------------------------------------------------------------------
-
-	/**
-	 * Creates a custom page for this add-on.
-	 */
-	// public function plugin_page() {
-    //     echo 'Hello world';
-	// }
-
-	/**
-	 * Configures the settings which should be rendered on the add-on settings tab.
-	 *
-	 * @return array
-	 */
-	// public function plugin_settings_fields() {
-	// 	return array(
-	// 		array(
-	// 			'title'  => esc_html__( 'Simple Add-On Settings', 'entrata_gforms_addon' ),
-	// 			'fields' => array(
-	// 				array(
-	// 					'name'    => 'textbox',
-	// 					'tooltip' => esc_html__( 'This is the tooltip', 'entrata_gforms_addon' ),
-	// 					'label'   => esc_html__( 'This is the label', 'entrata_gforms_addon' ),
-	// 					'type'    => 'text',
-	// 					'class'   => 'small',
-	// 				),
-	// 			),
-	// 		),
-	// 	);
-	// }
-
 	/**
 	 * Configures the settings which should be rendered on the feed edit page in the Form Settings > Simple Feed Add-On area.
 	 *
@@ -197,6 +195,13 @@ class GFSimpleFeedAddOn extends GFFeedAddOn {
 						'type'    => 'text',
 						'name'    => 'feedName',
 						'class'   => 'small',
+                    ),
+                    array(
+						'label'   => esc_html__( 'Request URL', 'entrata_gforms_addon' ),
+						'type'    => 'text',
+                        'name'    => 'entrata_requesturl',
+                        'tooltip'   => esc_html__( 'E.g. https://YOURDOMAIN.entrata.com/api/v1/leads', 'gforms_entrata' ),
+						'class'   => 'medium',
 					),
                     array(
 						'type'      => 'text',
@@ -214,7 +219,14 @@ class GFSimpleFeedAddOn extends GFFeedAddOn {
 						'type'      => 'text',
 						'name'      => 'entrata_propertyid',
 						'label'     => esc_html__( 'Entrata property ID', 'gforms_entrata' ),
-						'tooltip'   => esc_html__( 'This should be a seven-digit number, e.g. 1234567', 'gforms_entrata' ),
+						'tooltip'   => esc_html__( 'This should be a 7-digit number, e.g. 1234567', 'gforms_entrata' ),
+						'class'		=>  'medium',
+                    ),
+                    array(
+						'type'      => 'text',
+						'name'      => 'entrata_leadsource',
+						'label'     => esc_html__( 'Lead source ID', 'gforms_entrata' ),
+						'tooltip'   => esc_html__( 'This should be a 5-digit number, e.g. 12345', 'gforms_entrata' ),
 						'class'		=>  'medium',
 					),
 					array(

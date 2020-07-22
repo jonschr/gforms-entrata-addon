@@ -3,7 +3,7 @@
 	Plugin Name: Gravity Forms Entrata Addon
 	Plugin URI: https://elod.in
     Description: Just another plugin to add Entrata feeds to Gravity Forms.
-	Version: 0.1
+	Version: 1.0
     Author: Jon Schroeder
     Author URI: https://elod.in
 
@@ -46,11 +46,11 @@ class GF_Simple_Feed_AddOn_Bootstrap {
 
 		require_once( 'lib/class-entrata-addon-feed.php' );
 
-		GFAddOn::register( 'GFSimpleFeedAddOn' );
+		GFAddOn::register( 'GFEntrataFeedAddon' );
 	}
 
 }
 
 function gf_simple_feed_addon() {
-	return GFSimpleFeedAddOn::get_instance();
+	return GFEntrataFeedAddon::get_instance();
 }

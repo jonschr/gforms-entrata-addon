@@ -1,6 +1,8 @@
 # Entrata for Gravity Forms
 
-This plugin adds feeds capabilities for Entrata, using the [sendLeads API for Entrata](https://www.entrata.com/api/v1/documentation/sendLeads). The methodology used is standard, allowing for you to link up the basic custom fields in Entrata with your form fields.
+This plugin adds feeds capabilities for Entrata, using the [sendLeads API for Entrata](https://www.entrata.com/api/v1/documentation/sendLeads). The methodology used is standard, allowing for you to link up the basic custom fields in Entrata with your form fields using a Gravity Forms feed.
+
+## Supported fields
 
 The following fields are supported in this implementation:
 * First name
@@ -9,7 +11,9 @@ The following fields are supported in this implementation:
 * Phone
 * Message
 
-You will need to supply the following information on the backend of the site:
+## Before you begin
+
+You will need to supply the following information on the backend of the site when setting up your feed:
 * Entrata endpoint URL (the place where we send requests)
 * Username
 * Password

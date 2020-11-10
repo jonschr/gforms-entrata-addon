@@ -1,3 +1,6 @@
+### 1.0.2
+* Adding logic to get the time in MT and submit it that way
+
 ### 1.0.1
 * Adding some links for future reference
 

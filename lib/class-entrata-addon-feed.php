@@ -81,7 +81,13 @@ class GFEntrataFeedAddon extends GFFeedAddOn {
         $email = $merge_vars['email'];
         $phone = $merge_vars['phone'];
         $message = $merge_vars['message'];
-        $date = date('m/d/Y', mktime(0, 0, 0, date("m"), date("d") -1, date("Y"))) . 'T' . '00:00:00';
+		// $date = date('m/d/Y', mktime(0, 0, 0, date("m"), date("d") -1, date("Y"))) . 'T' . '00:00:00';
+		// "createdDate": "mm/dd/yyyyT03:47:33",
+		
+		// $date = date('m/d/Y', mktime(0, 0, 0, date("m"), date("d") -1, date("Y"))) . 'T' . '00:00:00';
+		
+		date_default_timezone_set('America/Denver');
+		$date = sprintf( '%sT%s', date( 'm/d/Y' ), date( 'G:i:s' ) );
         
         $body = [
             "auth" => [

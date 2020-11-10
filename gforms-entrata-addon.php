@@ -31,7 +31,7 @@ if ( !defined( 'ABSPATH' ) ) {
 define( 'GFORMS_ENTRATA_ADDON', dirname( __FILE__ ) );
 
 // Define the version of the plugin
-define( 'GFORMS_ENTRATA_ADDON_VERSION', '1.0.1' );
+define( 'GFORMS_ENTRATA_ADDON_VERSION', '1.0.2' );
 
 add_action( 'gform_loaded', array( 'GF_Entrata_AddOn_Bootstrap', 'load' ), 5 );
 
